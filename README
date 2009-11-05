@@ -1,0 +1,48 @@
+        phppdo 
+
+    phppod是我开发的一套unix/linux/mac下的动态域名方案。这是一个dnspod.com的API的客
+端.用户只需要配置/etc /podclientd.conf这个配置文件,即可随时更新dnspod上的ip信
+息.[这个项目一没有高性能,二也不功能强大...,就是方便实用吧.]
+
+    项目托管在http://code.google.com/p/phppod/.
+
+    这是一个花生壳的替代方案。花生壳的特点是各种客户端等都很齐全，不少路由器也内置
+了花生壳的方案。但缺点也很明显,不能使有花生壳来绑定顶级域名,个数也有限制。而
+dnspod.com的服务却可以让你添加n个顶级域名,每个顶级域名下可添加数个子域名。另外
+,dnspod.com的服务可以依据线路选择解析到不同的IP上。
+
+    DNSPOD已经管理着数十万个站点的dns,是一个可靠的目前[至少到目前为止].
+
+使用方法:
+
+    1.先通过dnspod.com的网站注册，将您的域名的dns解析转移给dnspod.com;
+    2.在您的机器上安装phppod.
+
+如果是ubuntu/debian系列,请从项目主页下载deb包:
+
+    dpkg -i phppod-*.deb
+
+如果是其他linux/unix版本,请从项目主页下载src包,按照README的说明来安装:
+
+<pre>
+    $cd phppod-1.0.0
+    $cd pkg
+    $sudo  make install
+</pre>
+
+来安装.
+
+3.配置:
+
+    请修改/etc/podclientd.conf文件.
+
+4.运行:
+
+/usr/bin/podclient -c /etc/podclientd.conf >/var/log/podclient.log &
+php /usr/bin/podclient -c /etc/podclientd.conf
+
+欢迎各位和我一样在家里搭服务器,IP天天变的同志们使用并反馈.
+
+附记:如果无法运行，请将错误输出发给我。谢谢。我的 gtalk:xurenlu#gmail.com  ［
+请将＃换成@]
+

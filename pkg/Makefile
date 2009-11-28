@@ -4,8 +4,9 @@ all:
 install:
 	mkdir /usr/share/podclient/ -p
 	cp ../src/phppod.php /usr/share/podclient/phppod.php
-	cp ../src/phpcolor.php /usr/share/podclient/phpcolor.php
+	cp ../src/*.php /usr/share/podclient/
 	cp ../src/podclient.php /usr/bin/podclient
+	cp ../src/initconf.php /usr/bin/podinit
 	cp ../etc/podclientd.conf /etc/podclientd.conf 
 	#cp ../src/podclient /etc/init.d/podclient
 clean:

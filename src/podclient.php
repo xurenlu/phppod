@@ -7,15 +7,14 @@
  *
  * */
 #set_include_path("./:/home/z/share/pear/");
-define("VERSION","1.0.1");
+define("VERSION","1.0.4");
 define("PROG","phppod");
 define("UA",PROG."/".VERSION);
 
 include "/usr/share/podclient/phpcolor.php";//temp
-//include "/usr/share/podclient/phppod.php";//temp
-include "./phppod.php";//temp
-include "./Assert.php";//temp
-include "./CLogger.php";//temp
+include "/usr/share/podclient/phppod.php";//temp
+include "/usr/share/podclient/Assert.php";//temp
+include "/usr/share/podclient/CLogger.php";//temp
 
 function my_error_log($msg,$INFOLEVEL="ERROR"){
     if($INFOLEVEL=="ERROR")
@@ -169,19 +168,23 @@ foreach($topdomains as $topdomain=>$v){
             my_error_log("create top domain :$topdomain failed.");
     }
 }
+reset($topdomains);
 /**
  * now ,check all records.
  * if not exists,create it for you automaticlly;
  * */
 foreach($domains as $domain){
     $domain=makeRecord($domain,$ip);
-    $recd=$dnspod->getRecordByName($domain["domain"],$domain["old_sub_domain"],$domain["record_line"]);
-    if(isError($recd))
+    $recd=$dnspod->getRecordIDByName($domain["domain"],$domain["old_sub_domain"],$domain["record_line"]);
+    if(!($recd>0))
     {
         my_error_log("get record failed:".$domain["old_sub_domain"].".".$domain["domain"].",line:".$domain["record_line"]." failed,will create it for you.");
-        $retCreate=$dnspod->RecordCreate($domain,$domain["domain"]);
-        if(isError($recd)){
+        $retCreate=$dnspod->RecordCreate($domain,$domain["domain"],$domain["record_line"]);
+        if(isError($retCreate)){
             my_error_log("create record ".$domain["old_sub_domain"].".".$domain["domain"].",line:".$domain["record_line"]." failed,will create it for you.");
+            print_r($retCreate);
+        }else{
+            my_error_log("we create record:".$domain["old_sub_domain"].".".$domain["domain"].",line:".$domain["record_line"]."  for you.");
         }
     }
 }
@@ -195,6 +198,7 @@ foreach($domains as $domain){
     );
     if(isError($return)){
         my_error_log("can't modifyRecord:".$domain["domain"].",prefix:".$domain["old_sub_domain"].",ip/value:".$ip);
+        print_r($return);
     }
 }
 ?>

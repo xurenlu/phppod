@@ -2,7 +2,7 @@
 INSTALL="no"
 FLAGS="-d2  -y"
 PKGNAME="phppod"
-PKGVERSION="1.0.3"
+PKGVERSION="1.0.4"
 PKGRELEASE=`date +%Y%m%d`
 PKGGROUP="nonfree-renlu"
 PKGLICENSE="LGPL"

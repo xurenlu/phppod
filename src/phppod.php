@@ -19,9 +19,6 @@ define("DOMAIN_ERROR",-2);
 * test if an error occured;
 * */
 function isError($data){
-    if($data===false){
-        return true;
-    }
     if(is_array($data)){
         if($data["status"]["code"]==1)
             return false;
@@ -29,6 +26,9 @@ function isError($data){
             return true;
     }
     else{
+        if($data===false){
+            return true;
+        }
         if($data>=0)
             return false;
         else
@@ -170,9 +170,10 @@ class DnspodApi {
         global $_G;
     }
     /**
-     * get the record_id for single record
+     * get the record for single record 
      * */
-    public function getRecordByname($domain,$record_name,$line="default"){
+
+    public function getRecordByName($domain,$record_name,$line="default"){
         global $_G;
         if($_G["record.$domain.$record_name.$line"])
             return $_G["record.$domain.$record_name.$line"];
@@ -190,11 +191,19 @@ class DnspodApi {
         }
         foreach($ret["records"]["record"] as $ir){
             if($ir["name"]==$record_name && $ir["line"]==$line){
-                $_G["record.$domain.$record_name.$line"]=$ir["id"];
-                return $ir["id"];
+                $_G["record.$domain.$record_name.$line"]=$ir;
+                return $ir;
             }
         }
         return array("status"=>array('code'=>RECORD_ERROR));
+    }
+    /**
+     * get the record_id for single record
+     * */
+    public function getRecordIdByName($domain,$record_name,$line="default"){
+        $ret=$this->getRecordByName($domain,$record_name,$line);
+        return $ret["id"];
+
     }
     public function createDomain($domain){
         $this->setAction('Domain.Create');
@@ -240,7 +249,7 @@ class DnspodApi {
         if($this->isError($domainId)){
             return $domainId;
         }
-        $recordId=$this->getRecordByName($domain,$sub_domain,$params["record_line"]);
+        $recordId=$this->getRecordIdByName($domain,$sub_domain,$params["record_line"]);
         if($this->isError($recordId)){
             return $recordId;
         }
@@ -324,8 +333,13 @@ function splitDomain($domain){
 }
 
 function makeRecord($domain,$ip){
-    $domain["value"]=$ip;
-
+    if( !array_key_exists("value",$domain) )
+        $domain["value"]=$ip;
+    $domain["value"]= trim($domain["value"]);
+    //如果没有正确地设ip,也会置为当前ip;
+    if(!preg_match("/^([\d+\.]+)$/",$domain["value"])){
+        $domain["value"]=$ip;
+    }
     if(!array_key_exists("sub_domain",$domain))
         $domain["sub_domain"]=$domain["old_sub_domain"];
     if(!array_key_exists("record_type",$domain))

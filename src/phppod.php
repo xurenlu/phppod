@@ -3,6 +3,9 @@
  * @Author:162cm<helloasp@hotmail.com>
  * @Version:1.0.1
  * */
+
+
+
 define("NET_DEFAULT",1);
 define("NET_TELCOM",2);
 define("NET_CNC",3);
@@ -11,6 +14,27 @@ define("NET_EDU",4);
 
 define("RECORD_ERROR",-1);
 define("DOMAIN_ERROR",-2);
+
+/**
+* test if an error occured;
+* */
+function isError($data){
+    if($data===false){
+        return true;
+    }
+    if(is_array($data)){
+        if($data["status"]["code"]==1)
+            return false;
+        else
+            return true;
+    }
+    else{
+        if($data>=0)
+            return false;
+        else
+            return true;
+    }
+}
 
 class HTTP {
 
@@ -35,6 +59,7 @@ class HTTP {
         $this->method = $method;
 
         curl_setopt ( $this->ch, CURLOPT_RETURNTRANSFER, true );
+        curl_setopt ( $this->ch, CURLOPT_USERAGENT,UA);
 
         if ($redirect) {
             curl_setopt ( $this->ch, CURLOPT_FOLLOWLOCATION, true );
@@ -74,7 +99,6 @@ class HTTP {
         } else {
             curl_setopt ( $this->ch, CURLOPT_URL, $this->url . '?' . $this->param );
         }
-
         return true;
     }
 
@@ -87,14 +111,15 @@ class HTTP {
     }
 }
 
+/**
+ * api for dnspod ;
+ * */
 class DnspodApi {
     private $httpHandler;
     private $email;
     private $pass;
     private $format = 'json';
-
     private $error = array();
-
     public function __construct($email, $pass) {
         if (! $email || ! $pass) {
             exit ( 'no email or pass' );
@@ -103,32 +128,73 @@ class DnspodApi {
         $this->pass = $pass;
         $this->httpHandler = new HTTP ( 'http://www.dnspod.com/API/' );
     }
+    /**
+     * test if an error occured;
+     * */
+    function isError($data){
+        return isError($data);
+    }
+    function throwError($data,$msg){
+        if(is_array($data)){
+        $data["status"]["message"]=
+            $data["status"]["message"]."\n".$msg;
+        }
+        else{
+            $data=array(
+                "status"=>array(
+                    "code"=>$data,
+                    "message"=>$msg
+                )
+            );
+        }
+        return $data;
+    }
+    /**
+     * get the domain_id for specific domain
+     * */
     public function GetDomainId($domain){
-        $ret=$this->GetDomainList();
-        foreach($ret->domains->domain as $idomain){
+        global $_G;
+        if($_G["domain_id.$domain"])
+            return $_G["domain_id.$domain"];
 
-            if($idomain->name==$domain){
-                return $idomain->id;
+        $ret=$this->GetDomainList();
+        foreach($ret["domains"]["domain"] as $idomain){
+            if($idomain["name"]==$domain){
+                $_G["domain_id.$domain"]=$idomain["id"];
+                return $idomain["id"];
             }
         }
-        return DOMAIN_ERROR;
+        return array("status"=>array("code"=>DOMAIN_ERROR));
     }
-    public function getRecordByname($domain,$record_name){
+    public function setRecord($domain,$record_name,$line="default"){
+        global $_G;
+    }
+    /**
+     * get the record_id for single record
+     * */
+    public function getRecordByname($domain,$record_name,$line="default"){
+        global $_G;
+        if($_G["record.$domain.$record_name.$line"])
+            return $_G["record.$domain.$record_name.$line"];
+
         $domainId=$this->getDomainId($domain);
-        if($domainId<0){
-            error_log("can't get domainId of $domain");
+        if($this->isError($domainId)){
+            $msg= "can't get domainId of $domain";
+            error_log($msg);
+            $this->throwError($domainId,$msg);
             return $domainId;
         }
         $ret=$this->getRecordlist($domainId);
-        #print "try to done";
-        #print_r($ret);
-        foreach($ret->records->record as $ir){
-            #print "new record:";
-            #print $ir->name;
-            if($ir->name==$record_name)
-                return $ir->id;
+        if(isError($ret)){
+            return $ret;
         }
-        return RECORD_ERROR;
+        foreach($ret["records"]["record"] as $ir){
+            if($ir["name"]==$record_name && $ir["line"]==$line){
+                $_G["record.$domain.$record_name.$line"]=$ir["id"];
+                return $ir["id"];
+            }
+        }
+        return array("status"=>array('code'=>RECORD_ERROR));
     }
     public function createDomain($domain){
         $this->setAction('Domain.Create');
@@ -169,11 +235,13 @@ class DnspodApi {
     }
 
     public function modifyRecord($params,$domain,$sub_domain){
+
         $domainId=$this->getDomainId($domain);
-        if($domainId<0)
+        if($this->isError($domainId)){
             return $domainId;
-        $recordId=$this->getRecordByName($domain,$sub_domain);
-        if($recordId<0){
+        }
+        $recordId=$this->getRecordByName($domain,$sub_domain,$params["record_line"]);
+        if($this->isError($recordId)){
             return $recordId;
         }
         $this->setAction('Record.Modify');
@@ -209,14 +277,7 @@ class DnspodApi {
         $this->httpHandler->setParam($params);
 
         $result = $this->httpHandler->exec ();
-
-        $result = json_decode ( $result );
-
-        if ($result->status->code !== '1') {
-            $this->error($result);
-            return false;
-        }
-
+        $result = json_decode ( $result ,true);
         return $result;
     }
 
@@ -225,8 +286,8 @@ class DnspodApi {
     }
 
     private function error($result){
-        $this->error['code'] = $result->status->code;
-        $this->error['message'] = $result->status->message;
+        $this->error['code'] = $result["status"]["code"];
+        $this->error['message'] = $result["status"]["message"];
     }
 
     public function getError(){
@@ -260,5 +321,21 @@ function splitDomain($domain){
     if($first=="")
         $first="@";
     return  array($first,$second.$appendix);
+}
+
+function makeRecord($domain,$ip){
+    $domain["value"]=$ip;
+
+    if(!array_key_exists("sub_domain",$domain))
+        $domain["sub_domain"]=$domain["old_sub_domain"];
+    if(!array_key_exists("record_type",$domain))
+        $domain["record_type"]="A";
+    if(!array_key_exists("record_line",$domain))
+        $domain["record_line"]="default";
+    if(!array_key_exists("mx",$domain))
+        $domain["mx"]=10;
+    if(!array_key_exists("ttl",$domain))
+        $domain["ttl"]=1;
+    return $domain;
 }
 ?> 

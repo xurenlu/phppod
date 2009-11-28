@@ -9,8 +9,13 @@
 #set_include_path("./:/home/z/share/pear/");
 define("VERSION","1.0.1");
 define("PROG","phppod");
-include "/usr/share/podclient/phpcolor.php";
-include "/usr/share/podclient/phppod.php";
+define("UA",PROG."/".VERSION);
+
+include "/usr/share/podclient/phpcolor.php";//temp
+//include "/usr/share/podclient/phppod.php";//temp
+include "./phppod.php";//temp
+include "./Assert.php";//temp
+include "./CLogger.php";//temp
 
 function my_error_log($msg,$INFOLEVEL="ERROR"){
     if($INFOLEVEL=="ERROR")
@@ -129,69 +134,67 @@ if(function_exists("posix_getpid")){
     }
 }
 
-    $ip=getIP();
-    $configs=parse_ini_file($options["c"],true);
-    $must_fields=array("username","password");
-    foreach($must_fields as $k){
-        if(!array_key_exists($k,$configs)){
-            my_error_log("conf file parse error.$k field must be specificed.");
-            exit();
+$ip=getIP();
+$configs=parse_ini_file($options["c"],true);
+$must_fields=array("username","password");
+foreach($must_fields as $k){
+    if(!array_key_exists($k,$configs)){
+        my_error_log("conf file parse error.$k field must be specificed.");
+        exit();
+    }
+}
+$topdomains=array();
+$domains=array();
+foreach($configs as $k=>$v){
+    if(is_array($v)){
+        $domainArray=splitDomain($k);
+        $v["old_sub_domain"]=$domainArray[0];
+        $v["domain"]=$domainArray[1];
+        $topdomains[$v["domain"]]="";
+        $domains[]=$v;
+    }
+}
+$dnspod = new dnspodapi($configs["username"], $configs["password"]);
+/**
+ * first and first, check if all top domains exists;
+ * if not exists;we create it for you.
+ * */
+foreach($topdomains as $topdomain=>$v){
+    $ret=$dnspod->GetDomainId($topdomain);
+    if(isError($ret))
+    {
+        my_error_log("get domain id for $topdomain failed");
+        $retCreate=$dnspod->CreateDomain($topdomain);
+        if(isError($retCreate))
+            my_error_log("create top domain :$topdomain failed.");
+    }
+}
+/**
+ * now ,check all records.
+ * if not exists,create it for you automaticlly;
+ * */
+foreach($domains as $domain){
+    $domain=makeRecord($domain,$ip);
+    $recd=$dnspod->getRecordByName($domain["domain"],$domain["old_sub_domain"],$domain["record_line"]);
+    if(isError($recd))
+    {
+        my_error_log("get record failed:".$domain["old_sub_domain"].".".$domain["domain"].",line:".$domain["record_line"]." failed,will create it for you.");
+        $retCreate=$dnspod->RecordCreate($domain,$domain["domain"]);
+        if(isError($recd)){
+            my_error_log("create record ".$domain["old_sub_domain"].".".$domain["domain"].",line:".$domain["record_line"]." failed,will create it for you.");
         }
     }
-    $domains=array();
-    foreach($configs as $k=>$v){
-        if(is_array($v)){
-            $domainArray=splitDomain($k);
-            $v["old_sub_domain"]=$domainArray[0];
-            $v["domain"]=$domainArray[1];
-            $domains[]=$v;
-        }
+}
+reset($domains);
+foreach($domains as $domain){
+    $domain=makeRecord($domain,$ip);
+    $return=$dnspod->ModifyRecord(
+        $domain,
+        $domain["domain"],
+        $domain["old_sub_domain"]
+    );
+    if(isError($return)){
+        my_error_log("can't modifyRecord:".$domain["domain"].",prefix:".$domain["old_sub_domain"].",ip/value:".$ip);
     }
-    $dnspod = new dnspodapi($configs["username"], $configs["password"]);
-    foreach($domains as $domain){
-        $domain["value"]=$ip;
-        if(!array_key_exists("sub_domain",$domain))
-            $domain["sub_domain"]=$domain["old_sub_domain"];
-        if(!array_key_exists("record_type",$domain))
-            $domain["record_type"]=1;
-        if(!array_key_exists("record_line",$domain))
-            $domain["record_line"]=1;
-        if(!array_key_exists("mx",$domain))
-            $domain["mx"]=10;
-        if(!array_key_exists("ttl",$domain))
-            $domain["ttl"]=1;
-        
-        $return=$dnspod->ModifyRecord(
-            $domain,
-            $domain["domain"],
-            $domain["old_sub_domain"]
-        );
-        if($return===false){
-            my_error_log("domain:".$domain["domain"].",subdomain:".$domain["old_sub_domain"]." modify failed");
-            print_r($dnspod->getError());
-        }
-        if($return==DOMAIN_ERROR){
-            my_error_log("domain:".$domain["domain"]." not exists.try to create one for you","INFO");
-            $dnspod->createDomain($domain["domain"]);
-            $return=$dnspod->ModifyRecord(
-                $domain,
-                $domain["domain"],
-                $domain["old_sub_domain"]
-            );
-        }
-        if($return==RECORD_ERROR){
-            $return=$dnspod->RecordCreate($domain,$domain["domain"]);
-            print "try to create domain record,wait a moment pelase...\n";
-        }
-        elseif($return<0){
-            my_error_log("got some error when create domain:[".$domain["domain"]."],error code:$return\n");
-        }
-        elseif($return==false){
-            print "got some unkown error\n";
-        }
-        else{
-            print "update information successful\n";
-        }
-    }
-
+}
 ?>

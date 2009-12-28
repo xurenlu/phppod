@@ -5,7 +5,7 @@
 息.[这个项目一没有高性能,二也不功能强大...,就是方便实用吧.]
 
     项目托管在http://github.com/xurenlu/phppod/ （由
-    http://code.google.com/p/phppod/迁移而来)
+    http://code.google.com/p/phppod/迁移而来),我将在博客(http://www.162cm.com/archives/875.html)随时给出最新更新;
 
     这是一个花生壳的替代方案。花生壳的特点是各种客户端等都很齐全，不少路由器也内置
 了花生壳的方案。但缺点也很明显,不能使有花生壳来绑定顶级域名,个数也有限制。而

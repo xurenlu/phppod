@@ -320,7 +320,7 @@ function getIP(){
  * */
 function splitDomain($domain){
     $domain=strtolower($domain);
-    $patt='(.com.cn|.net.cn|.org.cn|.gov.cn|.com|.cn|.net|.org|.name|.info|.us|.me|.la)';
+    $patt='(.com.cn|.net.cn|.org.cn|.gov.cn|.com|.cn|.net|.org|.name|.info|.us|.me|.la|.cc)';
     $domains=preg_match_all($patt,$domain,$out,PREG_PATTERN_ORDER);
     $appendix=array_pop(array_pop(($out)));
     $sub=substr($domain,0,strlen($domain)-strlen($appendix));

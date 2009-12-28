@@ -7,7 +7,7 @@
  *
  * */
 #set_include_path("./:/home/z/share/pear/");
-define("VERSION","1.0.4");
+define("VERSION","1.0.5");
 define("PROG","phppod");
 define("UA",PROG."/".VERSION);
 
@@ -199,6 +199,9 @@ foreach($domains as $domain){
     if(isError($return)){
         my_error_log("can't modifyRecord:".$domain["domain"].",prefix:".$domain["old_sub_domain"].",ip/value:".$ip);
         print_r($return);
+    }
+    else{
+        print phpcl_str("$domain update success.\n",PHPCL_UNDERLINE,PHPCL_GREEN,PHPCL_BLACK);
     }
 }
 ?>
